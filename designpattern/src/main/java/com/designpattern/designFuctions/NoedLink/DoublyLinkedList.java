@@ -1,11 +1,11 @@
-package com.designFuctions.NoedLink;
+package com.designpattern.designFuctions.NoedLink;
 
 /**
  * Created with IntelliJ IDEA.
  *
- * @Author: doom
- * @Date: 2026/02/23/15:27
- * @Description:
+ * @author : doom
+ * @date: 2026/02/23/15:27
+ * @description:
  */
 public class DoublyLinkedList<E> implements List<E>{
     private  Node<E> first;

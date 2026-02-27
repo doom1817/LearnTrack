@@ -1,13 +1,13 @@
-package com.designFuctions.NoedLink;
+package com.designpattern.designFuctions.NoedLink;
 
 
 
 /**
  * Created with IntelliJ IDEA.
  *
- * @Author: doom
- * @Date: 2026/02/23/15:23
- * @Description:
+ * @author : doom
+ * @date: 2026/02/23/16:12
+ * @description:
  */
 public class LinkListTest {
     public static void main(String[] args) {

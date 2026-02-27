@@ -1,13 +1,13 @@
-package com.designFuctions.NoedLink;
+package com.designpattern.designFuctions.NoedLink;
 
 import java.util.Objects;
 
 /**
  * Created with IntelliJ IDEA.
  *
- * @Author: doom
- * @Date: 2026/02/23/16:12
- * @Description:
+ * @author : doom
+ * @date: 2026/02/23/16:12
+ * @description:
  */
 public class DoublyCircleLinkedList<E> implements List<E> {
     private static class Node<E> {

@@ -1,13 +1,13 @@
-package com.designFuctions.NoedLink;
+package com.designpattern.designFuctions.NoedLink;
 
 import java.util.Objects;
 
 /**
  * Created with IntelliJ IDEA.
  *
- * @Author: doom
- * @Date: 2026/02/23/16:09
- * @Description:
+ * @author : doom
+ * @date: 2026/02/23/16:12
+ * @description:
  */
 public class SinglyLinkedList<E> implements List<E> {
 
@@ -102,6 +102,6 @@ public class SinglyLinkedList<E> implements List<E> {
             current = current.next;
         }
         sb.append("]");
-        System.out.println(sb.toString());
+        System.out.println(sb);
     }
 }

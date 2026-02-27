@@ -1,4 +1,4 @@
-package com.designFuctions.NoedLink;
+package com.designpattern.designFuctions.NoedLink;
 
 /**
  * Created with IntelliJ IDEA.

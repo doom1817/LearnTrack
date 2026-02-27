@@ -1,11 +1,11 @@
-package com.designFuctions.NoedLink;
+package com.designpattern.designFuctions.NoedLink;
 
 /**
  * Created with IntelliJ IDEA.
  *
- * @Author: doom
- * @Date: 2026/02/23/16:11
- * @Description:
+ * @author : doom
+ * @date: 2026/02/23/16:12
+ * @description:
  */
 public class SingleCircleLinkedList<E> implements List<E>{
     private static class Node<E>{
