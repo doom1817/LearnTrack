@@ -1,33 +1,25 @@
 package com.hot.dp;
 
 /**
- * Created with IntelliJ IDEA.
- *
- * @Author: doom
- * @Date: 2026/02/18/16:24
- * @Description:
- *  力扣322. 零钱兑换
+ * @author: doom
+ * @date: 2026/04/28/10:56
+ * @description:
+ *  力扣70. 爬楼梯
  */
 public class title1 {
     public static void main(String[] args) {
-        System.out.println(coinChange(new int[]{1,2,5}, 11));
-        System.out.println(coinChange(new int[]{2}, 3));
-        System.out.println(coinChange(new int[]{1}, 0));
-
+        System.out.println(climbStairs(2));
     }
-    public static int coinChange(int[] coins, int amount) {
-        int[] dp = new int[amount+1];
-        if (amount == 0) {return 0;}
-        for (int i = 1; i <= amount; i++) {
-            dp[i] = amount+1;
+    private static int climbStairs(int n) {
+        if (n<=1){
+            return 1 ;
         }
-        for (int i = 1; i <= amount; i++){
-            for (int coin : coins) {
-                if (coin <= i && dp[i - coin] != Integer.MAX_VALUE) {
-                    dp[i] = Math.min(dp[i], dp[i - coin] + 1);
-                    }
-            }
+        int[] dp = new int[n+1];
+        dp[0] = 1;
+        dp[1] = 1;
+        for (int i = 2; i <= n; i++){
+            dp[i] = dp[i-1] + dp[i-2];
         }
-        return dp[amount] == amount+1 ? -1 : dp[amount];
+        return dp[n];
     }
 }
