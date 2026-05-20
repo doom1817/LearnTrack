@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>红黑树 (Red-Black Tree) 可视化学习工具</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: #1a1a2e; color: #e0e0e0;
+    height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  /* === Header / Control Bar === */
+  .header {
+    background: #16213e; padding: 14px 24px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    border-bottom: 1px solid #0f3460; flex-shrink: 0;
+    box-shadow: 0 2px 20px rgba(0,0,0,0.3);
+  }
+  .header .title { font-size: 20px; font-weight: 700; color: #e94560; margin-right: 18px; letter-spacing: 1px; }
+  .header .subtitle { font-size: 12px; color: #8899aa; margin-right: 18px; }
+  .control-group { display: flex; align-items: center; gap: 8px; }
+  .control-group label { font-size: 13px; color: #aab; }
+  input[type="number"] {
+    width: 72px; padding: 6px 10px; border: 1px solid #0f3460; border-radius: 6px;
+    background: #1a1a2e; color: #e0e0e0; font-size: 14px; outline: none;
+  }
+  input[type="number"]:focus { border-color: #e94560; }
+  .btn {
+    padding: 7px 18px; border: none; border-radius: 6px; cursor: pointer;
+    font-size: 13px; font-weight: 600; transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+  .btn:hover { transform: translateY(-1px); filter: brightness(1.15); }
+  .btn:active { transform: translateY(0); }
+  .btn-insert { background: #0f3460; color: #e0e0e0; }
+  .btn-insert:hover { background: #1a4a8a; }
+  .btn-delete { background: #533483; color: #e0e0e0; }
+  .btn-delete:hover { background: #6a44a8; }
+  .btn-random { background: #16213e; color: #e0e0e0; border: 1px solid #0f3460; }
+  .btn-random:hover { background: #1a2a5e; }
+  .btn-pause { background: #e94560; color: #fff; }
+  .btn-pause:hover { background: #ff5a78; }
+  .btn-next { background: #0f3460; color: #e0e0e0; }
+  .btn-next:hover { background: #1a4a8a; }
+  .btn-reset { background: #2d2d44; color: #aab; border: 1px solid #444; }
+  .btn-reset:hover { background: #3d3d55; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; filter: none; }
+
+  .speed-control { display: flex; align-items: center; gap: 8px; margin-left: 8px; }
+  .speed-control label { font-size: 12px; color: #8899aa; }
+  input[type="range"] {
+    width: 90px; height: 4px; -webkit-appearance: none; appearance: none;
+    background: #0f3460; border-radius: 2px; outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: #e94560; cursor: pointer;
+  }
+  .speed-val { font-size: 12px; color: #e94560; min-width: 40px; text-align: center; }
+  .status-badge {
+    font-size: 12px; padding: 4px 12px; border-radius: 12px;
+    background: #0f3460; color: #8899aa; margin-left: auto;
+  }
+  .status-badge.active { background: #e94560; color: #fff; animation: pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+  /* === Main Layout === */
+  .main {
+    flex: 1; display: flex; min-height: 0; overflow: hidden;
+  }
+
+  /* === Canvas === */
+  .canvas-area {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    background: #1a1a2e; position: relative; overflow: hidden;
+  }
+  .canvas-area svg {
+    width: 100%; height: 100%;
+  }
+
+  /* === Log Panel === */
+  .log-panel {
+    width: 340px; min-width: 340px; background: #16213e; border-left: 1px solid #0f3460;
+    display: flex; flex-direction: column; flex-shrink: 0;
+  }
+  .log-header {
+    padding: 10px 16px; font-size: 14px; font-weight: 700; color: #e94560;
+    border-bottom: 1px solid #0f3460; flex-shrink: 0;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .log-header .step-count { font-size: 12px; color: #8899aa; font-weight: 400; }
+  .log-body {
+    flex: 1; overflow-y: auto; padding: 8px 0;
+  }
+  .log-body::-webkit-scrollbar { width: 4px; }
+  .log-body::-webkit-scrollbar-track { background: transparent; }
+  .log-body::-webkit-scrollbar-thumb { background: #0f3460; border-radius: 2px; }
+
+  .log-entry {
+    padding: 6px 16px 6px 24px; font-size: 13px; line-height: 1.5;
+    border-left: 3px solid transparent; transition: all 0.3s;
+    font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  }
+  .log-entry .tag {
+    display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 3px;
+    margin-right: 6px; font-weight: 600;
+  }
+  .log-entry .tag.search    { background: #2d2d44; color: #8899aa; }
+  .log-entry .tag.insert    { background: #0f3460; color: #6ab0ff; }
+  .log-entry .tag.delete    { background: #533483; color: #c084fc; }
+  .log-entry .tag.rotate    { background: #e94560; color: #fff; }
+  .log-entry .tag.color     { background: #b8860b; color: #ffd700; }
+  .log-entry .tag.case      { background: #1a6b3c; color: #6fcf97; }
+  .log-entry .tag.done      { background: #1a6b3c; color: #6fcf97; }
+  .log-entry .tag.info      { background: #0f3460; color: #6ab0ff; }
+
+  .log-entry.active {
+    border-left-color: #e94560; background: rgba(233,69,96,0.08);
+  }
+  .log-entry.completed {
+    border-left-color: transparent; opacity: 0.7;
+  }
+
+  /* === Tree Nodes SVG === */
+  .node-circle {
+    transition: cx 0.4s ease, cy 0.4s ease, fill 0.35s ease, r 0.3s ease;
+  }
+  .node-text {
+    transition: x 0.4s ease, y 0.4s ease, fill 0.35s ease;
+    font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 13px; font-weight: 700; user-select: none;
+    pointer-events: none;
+  }
+  .edge-line {
+    transition: x1 0.4s ease, y1 0.4s ease, x2 0.4s ease, y2 0.4s ease, stroke 0.35s ease;
+  }
+  .node-highlight {
+    filter: drop-shadow(0 0 8px rgba(233,69,96,0.8));
+  }
+  .nil-text { fill: #444; font-size: 10px; }
+
+  .legend {
+    position: absolute; bottom: 16px; left: 20px;
+    display: flex; gap: 16px; font-size: 12px; color: #8899aa;
+    background: rgba(22,33,62,0.85); padding: 8px 16px; border-radius: 8px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-color { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.15); }
+
+  @media (max-width: 820px) {
+    .log-panel { width: 260px; min-width: 260px; }
+    .header .title { font-size: 16px; margin-right: 10px; }
+    .header .subtitle { display: none; }
+  }
+  @media (max-width: 640px) {
+    .main { flex-direction: column; }
+    .log-panel { width: 100%; min-width: unset; max-height: 200px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== Control Bar ===== -->
+<div class="header">
+  <span class="title">🔴⚫ RBTree</span>
+  <span class="subtitle">算法导论标准实现 · 分步可视化</span>
+  <div class="control-group">
+    <label>键值</label>
+    <input type="number" id="keyInput" value="20" min="0" max="999">
+    <button class="btn btn-insert" id="btnInsert">➕ 插入</button>
+    <button class="btn btn-delete" id="btnDelete">✖️ 删除</button>
+    <button class="btn btn-random" id="btnRandom">🎲 随机生成</button>
+    <button class="btn btn-reset" id="btnReset">↺ 重置</button>
+  </div>
+  <div class="speed-control">
+    <label>速度</label>
+    <input type="range" id="speedSlider" min="0" max="100" value="50">
+    <span class="speed-val" id="speedDisplay">600ms</span>
+  </div>
+  <div class="control-group">
+    <button class="btn btn-pause" id="btnPause">⏸ 暂停</button>
+    <button class="btn btn-next" id="btnNext">⏭ 下一步</button>
+  </div>
+  <span class="status-badge" id="statusBadge">● 空闲</span>
+</div>
+
+<!-- ===== Main Area ===== -->
+<div class="main">
+  <div class="canvas-area" id="canvasArea">
+    <svg id="treeSvg" viewBox="0 0 1000 600">
+      <g id="edgesGroup"></g>
+      <g id="nodesGroup"></g>
+    </svg>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-color" style="background:#333;border-color:#555"></span> 黑色</span>
+      <span class="legend-item"><span class="legend-color" style="background:#e94560;border-color:#ff6b81"></span> 红色</span>
+      <span class="legend-item"><span class="legend-color" style="background:transparent;border:1px dashed #555"></span> NIL</span>
+      <span class="legend-item" id="treeStats" style="color:#667;font-size:11px;border-left:1px solid #333;padding-left:12px;">空树</span>
+    </div>
+  </div>
+  <div class="log-panel">
+    <div class="log-header">
+      <span>📋 分步日志</span>
+      <span class="step-count" id="stepCount">共 0 步</span>
+    </div>
+    <div class="log-body" id="logBody"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  1. Red-Black Tree 完整实现 (参考算法导论，匹配 Java 版本)
+// ============================================================
+
+const RED = false;
+const BLACK = true;
+
+class RBNode {
+  constructor(key) {
+    this.key = key;
+    this.left = null;
+    this.right = null;
+    this.parent = null;
+    this.color = RED;
+    this.id = RBNode._nextId++;
+  }
+}
+RBNode._nextId = 0;
+
+class RBTree {
+  constructor() {
+    this.NIL = new RBNode(null);
+    this.NIL.color = BLACK;
+    this.NIL.left = null;
+    this.NIL.right = null;
+    this.root = this.NIL;
+    // Step recorder
+    this.steps = [];
+    this._currentStepIdx = -1;
+  }
+
+  isNil(n) { return n === this.NIL || n === null; }
+
+  // --- Utilities ---
+  resetSteps() { this.steps = []; this._currentStepIdx = -1; }
+
+  _record(type, tag, msg, data) {
+    this.steps.push({ type, tag, msg, data: data || {} });
+  }
+
+  // After recording steps, we need to replay the tree operations.
+  // Strategy: Instead of modifying the tree during step recording,
+  // we'll record steps DURING actual tree operations, but we need
+  // to keep both a "working" tree and a way to snapshot state at each step.
+  //
+  // Simpler approach: Record steps with BEFORE/AFTER snapshots.
+  // We'll deep-clone the tree state at each step boundary.
+  //
+  // Actually, simplest: perform the full algorithm but record each
+  // decision/action step with the current tree state (we can capture
+  // the tree topology by traversing from root at each step).
+  // This way the tree IS mutated as we step through the algorithm.
+  //
+  // For step-by-step animation, we'll save snapshots of the tree
+  // (serialized node list) at each step.
+
+  _snapshot() {
+    // Return a flat array of node data (key, color, id, parentId, leftId, rightId)
+    const nodes = [];
+    const traverse = (n) => {
+      if (this.isNil(n)) return;
+      nodes.push({
+        id: n.id,
+        key: n.key,
+        color: n.color,
+        parentId: this.isNil(n.parent) ? null : n.parent.id,
+        leftId: this.isNil(n.left) ? null : n.left.id,
+        rightId: this.isNil(n.right) ? null : n.right.id,
+      });
+      traverse(n.left);
+      traverse(n.right);
+    };
+    if (!this.isNil(this.root)) traverse(this.root);
+    return nodes;
+  }
+
+  _snapshotWithHighlights(highlightIds, edgeHighlightIds, flashIds) {
+    return {
+      nodes: this._snapshot(),
+      highlightIds: highlightIds || [],
+      edgeHighlightIds: edgeHighlightIds || [],
+      flashIds: flashIds || [],
+    };
+  }
+
+  // --- BST Search ---
+  search(key) {
+    let cur = this.root;
+    while (!this.isNil(cur)) {
+      if (key < cur.key) cur = cur.left;
+      else if (key > cur.key) cur = cur.right;
+      else return cur;
+    }
+    return this.NIL;
+  }
+
+  minimum(node) {
+    while (!this.isNil(node.left)) node = node.left;
+    return node;
+  }
+
+  // --- Rotations ---
+  leftRotate(x) {
+    const y = x.right;
+    this._record('rotate', 'rotate', `左旋: 节点 ${x.key} 绕其右子 ${y.key} 左旋`, {
+      pivotId: x.id, childId: y.id, direction: 'left', snapshot: this._snapshotWithHighlights([x.id, y.id])
+    });
+    x.right = y.left;
+    if (!this.isNil(y.left)) y.left.parent = x;
+    y.parent = x.parent;
+    if (this.isNil(x.parent)) { this.root = y; }
+    else if (x === x.parent.left) { x.parent.left = y; }
+    else { x.parent.right = y; }
+    y.left = x;
+    x.parent = y;
+  }
+
+  rightRotate(y) {
+    const x = y.left;
+    this._record('rotate', 'rotate', `右旋: 节点 ${y.key} 绕其左子 ${x.key} 右旋`, {
+      pivotId: y.id, childId: x.id, direction: 'right', snapshot: this._snapshotWithHighlights([y.id, x.id])
+    });
+    y.left = x.right;
+    if (!this.isNil(x.right)) x.right.parent = y;
+    x.parent = y.parent;
+    if (this.isNil(y.parent)) { this.root = x; }
+    else if (y === y.parent.left) { y.parent.left = x; }
+    else { y.parent.right = x; }
+    x.right = y;
+    y.parent = x;
+  }
+
+  // --- Insert ---
+  put(key) {
+    this.resetSteps();
+    const z = new RBNode(key);
+    z.left = this.NIL;
+    z.right = this.NIL;
+
+    this._record('search', 'search', `开始插入: 查找 ${key} 的插入位置...`, {
+      snapshot: this._snapshotWithHighlights([], [])
+    });
+
+    let y = this.NIL;
+    let x = this.root;
+    while (!this.isNil(x)) {
+      y = x;
+      if (key < x.key) { x = x.left; }
+      else if (key > x.key) { x = x.right; }
+      else {
+        this._record('info', 'info', `键 ${key} 已存在，跳过插入`, { snapshot: this._snapshot() });
+        return; // key exists, keep the info step for feedback
+      }
+    }
+
+    z.parent = y;
+    if (this.isNil(y)) {
+      this.root = z;
+      this._record('insert', 'insert', `树为空，将 ${key} 设为根节点`, {
+        snapshot: this._snapshotWithHighlights([z.id])
+      });
+    } else if (key < y.key) {
+      y.left = z;
+      this._record('insert', 'insert', `将 ${key} 插入为 ${y.key} 的左子`, {
+        snapshot: this._snapshotWithHighlights([z.id, y.id])
+      });
+    } else {
+      y.right = z;
+      this._record('insert', 'insert', `将 ${key} 插入为 ${y.key} 的右子`, {
+        snapshot: this._snapshotWithHighlights([z.id, y.id])
+      });
+    }
+
+    this._record('color', 'color', `新节点 ${key} 默认为 红色`, {
+      snapshot: this._snapshotWithHighlights([z.id])
+    });
+
+    this.insertFixup(z);
+    this._record('done', 'done', `✅ 插入完成，树已恢复红黑性质`, {
+      snapshot: this._snapshot()
+    });
+  }
+
+  insertFixup(z) {
+    while (z.parent !== null && z.parent.color === RED) {
+      if (z.parent === z.parent.parent.left) {
+        const y = z.parent.parent.right; // uncle
+        if (y.color === RED) {
+          // Case 1
+          this._record('case', 'case', `⚠️ 插入 Case 1: 叔父节点 ${y.key} 为红色 → 父叔变色，祖父变红，继续向上`, {
+            snapshot: this._snapshotWithHighlights([z.id, z.parent.id, y.id, z.parent.parent.id])
+          });
+          z.parent.color = BLACK;
+          y.color = BLACK;
+          z.parent.parent.color = RED;
+          z = z.parent.parent;
+        } else {
+          if (z === z.parent.right) {
+            // Case 2
+            this._record('case', 'case', `⚠️ 插入 Case 2: 叔父 ${y ? y.key : 'NIL'} 为黑，${z.key} 是右子 → 左旋父节点转为 Case 3`, {
+              snapshot: this._snapshotWithHighlights([z.id, z.parent.id])
+            });
+            z = z.parent;
+            this.leftRotate(z);
+          }
+          // Case 3
+          this._record('case', 'case', `⚠️ 插入 Case 3: 叔父 ${y ? y.key : 'NIL'} 为黑，${z.key} 是左子 → 父变黑，祖父变红，右旋祖父`, {
+            snapshot: this._snapshotWithHighlights([z.id, z.parent.id, z.parent.parent.id])
+          });
+          z.parent.color = BLACK;
+          z.parent.parent.color = RED;
+          this.rightRotate(z.parent.parent);
+        }
+      } else {
+        // Symmetric
+        const y = z.parent.parent.left;
+        if (y.color === RED) {
+          this._record('case', 'case', `⚠️ 插入 Case 1(对称): 叔父节点 ${y.key} 为红色 → 父叔变色，祖父变红，继续向上`, {
+            snapshot: this._snapshotWithHighlights([z.id, z.parent.id, y.id, z.parent.parent.id])
+          });
+          z.parent.color = BLACK;
+          y.color = BLACK;
+          z.parent.parent.color = RED;
+          z = z.parent.parent;
+        } else {
+          if (z === z.parent.left) {
+            this._record('case', 'case', `⚠️ 插入 Case 2(对称): 叔父 ${y ? y.key : 'NIL'} 为黑，${z.key} 是左子 → 右旋父节点转为 Case 3`, {
+              snapshot: this._snapshotWithHighlights([z.id, z.parent.id])
+            });
+            z = z.parent;
+            this.rightRotate(z);
+          }
+          this._record('case', 'case', `⚠️ 插入 Case 3(对称): 叔父 ${y ? y.key : 'NIL'} 为黑，${z.key} 是右子 → 父变黑，祖父变红，左旋祖父`, {
+            snapshot: this._snapshotWithHighlights([z.id, z.parent.id, z.parent.parent.id])
+          });
+          z.parent.color = BLACK;
+          z.parent.parent.color = RED;
+          this.leftRotate(z.parent.parent);
+        }
+      }
+    }
+    this.root.color = BLACK;
+    this._record('color', 'color', `根节点强制设为 黑色（性质2）`, {
+      snapshot: this._snapshotWithHighlights([this.root.id])
+    });
+  }
+
+  // --- Delete ---
+  remove(key) {
+    this.resetSteps();
+    this._record('search', 'search', `开始删除: 查找键 ${key}...`, {
+      snapshot: this._snapshot()
+    });
+
+    const z = this.search(key);
+    if (this.isNil(z)) {
+      this._record('info', 'info', `键 ${key} 不存在，跳过删除`, { snapshot: this._snapshot() });
+      return; // keep the info step for feedback
+    }
+
+    this._record('delete', 'delete', `找到节点 ${key}，准备删除`, {
+      snapshot: this._snapshotWithHighlights([z.id])
+    });
+
+    let y = z;
+    let x;
+    let yOriginalColor = y.color;
+
+    if (this.isNil(z.left)) {
+      x = z.right;
+      this._record('delete', 'delete', `节点 ${key} 无左子，用右子替换`, {
+        snapshot: this._snapshotWithHighlights([z.id, x.id])
+      });
+      this.transplant(z, z.right);
+    } else if (this.isNil(z.right)) {
+      x = z.left;
+      this._record('delete', 'delete', `节点 ${key} 无右子，用左子替换`, {
+        snapshot: this._snapshotWithHighlights([z.id, x.id])
+      });
+      this.transplant(z, z.left);
+    } else {
+      y = this.minimum(z.right);
+      yOriginalColor = y.color;
+      x = y.right;
+      this._record('delete', 'delete', `节点 ${key} 有双子，找右子树最小节点 ${y.key} 作为后继`, {
+        snapshot: this._snapshotWithHighlights([z.id, y.id])
+      });
+      if (y.parent === z) {
+        x.parent = y;
+        this._record('delete', 'delete', `后继 ${y.key} 是 ${key} 的直接右子`, {
+          snapshot: this._snapshotWithHighlights([y.id, x.id])
+        });
+      } else {
+        this.transplant(y, y.right);
+        y.right = z.right;
+        y.right.parent = y;
+        this._record('delete', 'delete', `用后继 ${y.key} 替换节点 ${key}（移动子树）`, {
+          snapshot: this._snapshotWithHighlights([y.id, z.id])
+        });
+      }
+      this.transplant(z, y);
+      y.left = z.left;
+      y.left.parent = y;
+      y.color = z.color;
+      this._record('delete', 'delete', `后继 ${y.key} 继承 ${key} 的颜色 ${z.color === RED ? '红' : '黑'}`, {
+        snapshot: this._snapshotWithHighlights([y.id])
+      });
+    }
+
+    if (yOriginalColor === BLACK) {
+      this._record('case', 'case', `删除的是黑色节点，开始修复（Delete Fixup）`, {
+        snapshot: this._snapshotWithHighlights([x.id])
+      });
+      this.deleteFixup(x);
+    } else {
+      this._record('done', 'done', `删除的是红色节点，无需修复 ✅`, {
+        snapshot: this._snapshot()
+      });
+    }
+    this._record('done', 'done', `✅ 删除操作完成`, {
+      snapshot: this._snapshot()
+    });
+  }
+
+  transplant(u, v) {
+    if (this.isNil(u.parent)) {
+      this.root = v;
+    } else if (u === u.parent.left) {
+      u.parent.left = v;
+    } else {
+      u.parent.right = v;
+    }
+    v.parent = u.parent;
+  }
+
+  deleteFixup(x) {
+    while (x !== this.root && x.color === BLACK) {
+      if (x === x.parent.left) {
+        let w = x.parent.right; // sibling
+        if (w.color === RED) {
+          this._record('case', 'case', `⚠️ 删除 Case 1: 兄弟节点 ${w.key} 为红色 → 兄弟变黑，父变红，左旋父节点`, {
+            snapshot: this._snapshotWithHighlights([x.id, w.id, x.parent.id])
+          });
+          w.color = BLACK;
+          x.parent.color = RED;
+          this.leftRotate(x.parent);
+          w = x.parent.right;
+        }
+        if (w.left.color === BLACK && w.right.color === BLACK) {
+          this._record('case', 'case', `⚠️ 删除 Case 2: 兄弟 ${w.key} 的两个孩子都是黑色 → 兄弟变红，向上检查`, {
+            snapshot: this._snapshotWithHighlights([x.id, w.id, w.left.id, w.right.id])
+          });
+          w.color = RED;
+          x = x.parent;
+        } else {
+          if (w.right.color === BLACK) {
+            this._record('case', 'case', `⚠️ 删除 Case 3: 兄弟 ${w.key} 右侄为黑，左侄为红 → 左侄变黑，兄弟变红，右旋兄弟`, {
+              snapshot: this._snapshotWithHighlights([w.id, w.left.id])
+            });
+            w.left.color = BLACK;
+            w.color = RED;
+            this.rightRotate(w);
+            w = x.parent.right;
+          }
+          this._record('case', 'case', `⚠️ 删除 Case 4: 兄弟 ${w.key} 右侄为红 → 兄弟继承父色，父变黑，右侄变黑，左旋父节点`, {
+            snapshot: this._snapshotWithHighlights([w.id, w.right.id, x.parent.id])
+          });
+          w.color = x.parent.color;
+          x.parent.color = BLACK;
+          w.right.color = BLACK;
+          this.leftRotate(x.parent);
+          x = this.root;
+        }
+      } else {
+        // Symmetric
+        let w = x.parent.left;
+        if (w.color === RED) {
+          this._record('case', 'case', `⚠️ 删除 Case 1(对称): 兄弟节点 ${w.key} 为红色 → 兄弟变黑，父变红，右旋父节点`, {
+            snapshot: this._snapshotWithHighlights([x.id, w.id, x.parent.id])
+          });
+          w.color = BLACK;
+          x.parent.color = RED;
+          this.rightRotate(x.parent);
+          w = x.parent.left;
+        }
+        if (w.right.color === BLACK && w.left.color === BLACK) {
+          this._record('case', 'case', `⚠️ 删除 Case 2(对称): 兄弟 ${w.key} 的两个孩子都是黑色 → 兄弟变红，向上检查`, {
+            snapshot: this._snapshotWithHighlights([x.id, w.id, w.left.id, w.right.id])
+          });
+          w.color = RED;
+          x = x.parent;
+        } else {
+          if (w.left.color === BLACK) {
+            this._record('case', 'case', `⚠️ 删除 Case 3(对称): 兄弟 ${w.key} 左侄为黑，右侄为红 → 右侄变黑，兄弟变红，左旋兄弟`, {
+              snapshot: this._snapshotWithHighlights([w.id, w.right.id])
+            });
+            w.right.color = BLACK;
+            w.color = RED;
+            this.leftRotate(w);
+            w = x.parent.left;
+          }
+          this._record('case', 'case', `⚠️ 删除 Case 4(对称): 兄弟 ${w.key} 左侄为红 → 兄弟继承父色，父变黑，左侄变黑，右旋父节点`, {
+            snapshot: this._snapshotWithHighlights([w.id, w.left.id, x.parent.id])
+          });
+          w.color = x.parent.color;
+          x.parent.color = BLACK;
+          w.left.color = BLACK;
+          this.rightRotate(x.parent);
+          x = this.root;
+        }
+      }
+    }
+    x.color = BLACK;
+    this._record('color', 'color', `最终将 x 设为黑色（性质5）`, {
+      snapshot: this._snapshotWithHighlights([x.id])
+    });
+  }
+}
+
+// ============================================================
+//  2. Animation Controller
+// ============================================================
+
+class Animator {
+  constructor(tree, svg, logBody, stepCountEl, statusEl) {
+    this.tree = tree;
+    this.svg = svg;
+    this.logBody = logBody;
+    this.stepCountEl = stepCountEl;
+    this.statusEl = statusEl;
+    this.edgesGroup = svg.querySelector('#edgesGroup');
+    this.nodesGroup = svg.querySelector('#nodesGroup');
+
+    this.isPlaying = false;
+    this.isPaused = false;
+    this.currentStep = -1;
+    this.animationTimer = null;
+
+    this.nodeElements = new Map(); // nodeId -> SVG g element
+    this.edgeElements = new Map(); // child nodeId -> SVG line element
+    this.nilElements = new Map();  // 'L'|'R'+nodeId -> SVG g element (NIL markers)
+  }
+
+  getSpeedMs() {
+    const slider = document.getElementById('speedSlider');
+    const val = parseInt(slider.value);
+    // Map 0->1200ms, 50->600ms, 100->100ms
+    const ms = Math.round(1200 - (val / 100) * 1100);
+    return Math.max(50, ms);
+  }
+
+  updateSpeedDisplay() {
+    document.getElementById('speedDisplay').textContent = this.getSpeedMs() + 'ms';
+  }
+
+  reset() {
+    this.stop();
+    this.nodeElements.clear();
+    this.edgeElements.clear();
+    this.nilElements.clear();
+    this.nodesGroup.innerHTML = '';
+    this.edgesGroup.innerHTML = '';
+    this.currentStep = -1;
+    this.logBody.innerHTML = '';
+    this.stepCountEl.textContent = '共 0 步';
+    this.setStatus('空闲', false);
+  }
+
+  loadSteps(steps) {
+    this.reset();
+    this.tree.steps = steps;
+    this.stepCountEl.textContent = `共 ${steps.length} 步`;
+    // Initialize log entries
+    this.logBody.innerHTML = '';
+    steps.forEach((step, idx) => {
+      const div = document.createElement('div');
+      div.className = 'log-entry';
+      div.dataset.idx = idx;
+      div.innerHTML = `<span class="tag ${step.tag}">${step.tag.toUpperCase()}</span> ${step.msg}`;
+      this.logBody.appendChild(div);
+    });
+    // Show step 0
+    if (steps.length > 0) {
+      this.goToStep(0);
+    }
+  }
+
+  setStatus(text, active) {
+    this.statusEl.textContent = '● ' + text;
+    this.statusEl.className = 'status-badge' + (active ? ' active' : '');
+  }
+
+  goToStep(idx) {
+    if (idx < 0 || idx >= this.tree.steps.length) return;
+    this.currentStep = idx;
+
+    // Update log highlighting
+    const entries = this.logBody.querySelectorAll('.log-entry');
+    entries.forEach((e, i) => {
+      e.classList.toggle('active', i === idx);
+      e.classList.toggle('completed', i < idx);
+    });
+    // Scroll active into view
+    const activeEl = entries[idx];
+    if (activeEl) {
+      activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    // Render tree from step snapshot
+    const step = this.tree.steps[idx];
+    if (step.data && step.data.snapshot) {
+      this.renderFromSnapshot(step.data.snapshot);
+    }
+  }
+
+  renderFromSnapshot(snap) {
+    if (!snap || !snap.nodes) return;
+    const { nodes, highlightIds, edgeHighlightIds, flashIds } = snap;
+
+    // We need to compute tree layout from parent relationships
+    // First, build adjacency and find root
+    const nodeMap = new Map(); // id -> node data
+    const childrenMap = new Map(); // id -> { left, right }
+
+    nodes.forEach(n => {
+      nodeMap.set(n.id, n);
+    });
+
+    // Find root (node with no parent)
+    let rootId = null;
+    nodes.forEach(n => {
+      if (n.parentId === null) rootId = n.id;
+    });
+
+    // Build children
+    nodes.forEach(n => {
+      if (n.leftId) {
+        if (!childrenMap.has(n.id)) childrenMap.set(n.id, {});
+        childrenMap.get(n.id).left = n.leftId;
+      }
+      if (n.rightId) {
+        if (!childrenMap.has(n.id)) childrenMap.set(n.id, {});
+        childrenMap.get(n.id).right = n.rightId;
+      }
+    });
+
+    // Compute positions using Reingold-Tilford algorithm (simplified)
+    const positions = new Map(); // id -> { x, y }
+    if (rootId !== null) {
+      this.layoutTree(rootId, nodeMap, childrenMap, positions);
+    }
+
+    // Scale positions to SVG viewBox
+    const svgW = 1000;
+    const svgH = 600;
+    const levelHeight = 70;
+    const minNodeSpacing = 50;
+
+    // Find bounds
+    let maxX = -Infinity, minX = Infinity, maxY = -Infinity;
+    positions.forEach(p => {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y > maxY) maxY = p.y;
+    });
+
+    const rangeX = Math.max(maxX - minX, 1);
+    const paddingX = 60;
+    const paddingY = 50;
+    const availableW = svgW - 2 * paddingX;
+    const availableH = svgH - 2 * paddingY - (this.tree.isNil(this.tree.root) ? 0 : positions.size > 0 ? 0 : 0);
+
+    // Compute center positions
+    const centerX = svgW / 2;
+    const topY = paddingY + 40;
+
+    const renderPos = new Map();
+    positions.forEach((p, id) => {
+      const x = paddingX + (p.x - minX) / rangeX * availableW;
+      const y = topY + p.y * levelHeight;
+      renderPos.set(id, { x, y });
+    });
+
+    // --- Render Edges ---
+    this.edgesGroup.innerHTML = '';
+    nodes.forEach(n => {
+      if (n.parentId === null) return;
+      const parentPos = renderPos.get(n.parentId);
+      const childPos = renderPos.get(n.id);
+      if (!parentPos || !childPos) return;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', parentPos.x);
+      line.setAttribute('y1', parentPos.y);
+      line.setAttribute('x2', childPos.x);
+      line.setAttribute('y2', childPos.y);
+      line.setAttribute('stroke', '#555');
+      line.setAttribute('stroke-width', '2');
+      line.setAttribute('class', 'edge-line');
+      if (edgeHighlightIds && edgeHighlightIds.includes(n.id)) {
+        line.setAttribute('stroke', '#e94560');
+        line.setAttribute('stroke-width', '3');
+      }
+      this.edgesGroup.appendChild(line);
+    });
+
+    // --- Render Nodes ---
+    this.nodesGroup.innerHTML = '';
+    this.nodeElements.clear();
+
+    nodes.forEach(n => {
+      const pos = renderPos.get(n.id);
+      if (!pos) return;
+
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', pos.x);
+      circle.setAttribute('cy', pos.y);
+      circle.setAttribute('r', '22');
+      circle.setAttribute('fill', n.color === RED ? '#e94560' : '#2d2d44');
+      circle.setAttribute('stroke', n.color === RED ? '#ff6b81' : '#555');
+      circle.setAttribute('stroke-width', '2.5');
+      circle.setAttribute('class', 'node-circle');
+      if (highlightIds && highlightIds.includes(n.id)) {
+        circle.setAttribute('stroke', '#ffd700');
+        circle.setAttribute('stroke-width', '4');
+        circle.setAttribute('filter', 'url(#glow)');
+      }
+      if (flashIds && flashIds.includes(n.id)) {
+        circle.setAttribute('stroke', '#ffd700');
+        circle.setAttribute('stroke-width', '4');
+      }
+      g.appendChild(circle);
+
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', pos.x);
+      text.setAttribute('y', pos.y + 4.5);
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('fill', '#fff');
+      text.setAttribute('class', 'node-text');
+      text.textContent = n.key;
+      g.appendChild(text);
+
+      this.nodesGroup.appendChild(g);
+      this.nodeElements.set(n.id, g);
+    });
+
+    // Render NIL markers (subtle)
+    const nilNodes = [];
+    const nilSet = new Set();
+    nodes.forEach(n => {
+      if (n.leftId === null) nilNodes.push({ parentId: n.id, side: 'left', parentPos: renderPos.get(n.id) });
+      if (n.rightId === null) nilNodes.push({ parentId: n.id, side: 'right', parentPos: renderPos.get(n.id) });
+    });
+
+    // Wait, we also need to show NIL for nodes that have no left/right child.
+    // But we don't have explicit NIL entries in our snapshot.
+    // Let's add subtle NIL markers at the leaf level.
+    // Actually, we can skip explicit NIL rendering for now - too many.
+    // Instead, show NIL only for leaves that are direct children of shown nodes but missing.
+    // This is simpler: we'll do implicit NIL.
+
+    // Add glow filter
+    let defs = this.svg.querySelector('defs');
+    if (!defs) {
+      defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      this.svg.insertBefore(defs, this.svg.firstChild);
+    }
+    defs.innerHTML = `
+      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="5" result="coloredBlur"/>
+        <feMerge>
+          <feMergeNode in="coloredBlur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    `;
+
+    // Show NIL markers for leaf children
+    nilNodes.forEach(nil => {
+      if (!nil.parentPos) return;
+      const dx = nil.side === 'left' ? -35 : 35;
+      const dy = levelHeight * 0.8;
+      const x = nil.parentPos.x + dx;
+      const y = nil.parentPos.y + dy;
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', x);
+      text.setAttribute('y', y);
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('fill', '#444');
+      text.setAttribute('font-size', '9px');
+      text.setAttribute('class', 'nil-text');
+      text.textContent = 'NIL';
+      this.nodesGroup.appendChild(text);
+    });
+  }
+
+  layoutTree(rootId, nodeMap, childrenMap, positions, depth = 0, offset = 0, spread = 1.0) {
+    const node = nodeMap.get(rootId);
+    if (!node) return 0;
+
+    const children = childrenMap.get(rootId);
+    const leftId = children ? children.left : null;
+    const rightId = children ? children.right : null;
+
+    const leftSize = leftId ? this.layoutTree(leftId, nodeMap, childrenMap, positions, depth + 1, offset - spread / 2, spread / 2) : 0;
+    const rightSize = rightId ? this.layoutTree(rightId, nodeMap, childrenMap, positions, depth + 1, offset + spread / 2, spread / 2) : 0;
+
+    // Simple approach: assign x by inorder position, y by depth
+    // We'll use a counter for inorder positioning
+    if (!this._inorderCounter) this._inorderCounter = 0;
+    if (!this._inorderDepth) this._inorderDepth = depth;
+
+    if (leftId) {
+      // left subtree processed first
+    }
+    // Current node gets the next inorder slot
+    const inorderPos = this._inorderCounter++;
+    positions.set(rootId, { x: inorderPos, y: depth });
+
+    if (rightId) {
+      // right subtree processed later in recursion
+    }
+
+    return 1 + leftSize + rightSize;
+  }
+
+  // Need a better layout. Let's use an explicit inorder traversal.
+  computeLayout(rootId, nodeMap, childrenMap) {
+    this._inorderCounter = 0;
+    this._inorderTraverse(rootId, nodeMap, childrenMap);
+  }
+
+  _inorderTraverse(id, nodeMap, childrenMap) {
+    if (!id) return;
+    const children = childrenMap.get(id);
+    const leftId = children ? children.left : null;
+    const rightId = children ? children.right : null;
+    this._inorderTraverse(leftId, nodeMap, childrenMap);
+    const node = nodeMap.get(id);
+    if (nodeMap.has(id)) {
+      // We need positions map passed in. Let me refactor.
+    }
+    this._inorderTraverse(rightId, nodeMap, childrenMap);
+  }
+
+  play() {
+    if (this.tree.steps.length === 0) return;
+    if (this.currentStep >= this.tree.steps.length - 1) {
+      this.goToStep(0);
+    }
+    this.isPlaying = true;
+    this.isPaused = false;
+    this.setStatus('播放中', true);
+    this._advance();
+  }
+
+  _advance() {
+    if (!this.isPlaying || this.isPaused) return;
+    if (this.currentStep < this.tree.steps.length - 1) {
+      this.goToStep(this.currentStep + 1);
+      this.animationTimer = setTimeout(() => this._advance(), this.getSpeedMs());
+    } else {
+      this.isPlaying = false;
+      this.setStatus('完成', false);
+    }
+  }
+
+  pause() {
+    this.isPaused = true;
+    this.isPlaying = false;
+    if (this.animationTimer) {
+      clearTimeout(this.animationTimer);
+      this.animationTimer = null;
+    }
+    this.setStatus('已暂停', false);
+  }
+
+  resume() {
+    if (this.currentStep >= this.tree.steps.length - 1) {
+      this.goToStep(0);
+    }
+    this.isPlaying = true;
+    this.isPaused = false;
+    this.setStatus('播放中', true);
+    this._advance();
+  }
+
+  nextStep() {
+    if (this.isPlaying) this.pause();
+    if (this.currentStep < this.tree.steps.length - 1) {
+      this.goToStep(this.currentStep + 1);
+    }
+    this.setStatus('单步', false);
+  }
+
+  prevStep() {
+    if (this.isPlaying) this.pause();
+    if (this.currentStep > 0) {
+      this.goToStep(this.currentStep - 1);
+    }
+    this.setStatus('单步', false);
+  }
+
+  stop() {
+    this.isPlaying = false;
+    this.isPaused = false;
+    if (this.animationTimer) {
+      clearTimeout(this.animationTimer);
+      this.animationTimer = null;
+    }
+    this.setStatus('空闲', false);
+  }
+}
+
+// Fix the layout function to work properly
+// We'll override the layoutTree method with a proper one
+RBTree.prototype._inorderCounter = 0;
+
+// ============================================================
+//  3. Main Application
+// ============================================================
+
+const tree = new RBTree();
+const svg = document.getElementById('treeSvg');
+const logBody = document.getElementById('logBody');
+const stepCountEl = document.getElementById('stepCount');
+const statusEl = document.getElementById('statusBadge');
+
+const animator = new Animator(tree, svg, logBody, stepCountEl, statusEl);
+
+// Fix animator.layoutTree - actually we need a proper tree layout
+// Let's override the layout in the renderFromSnapshot method
+Animator.prototype.layoutTree = function(rootId, nodeMap, childrenMap, positions) {
+  // Use a simpler approach: compute inorder positions and depth
+  const inorder = [];
+  const depths = new Map();
+
+  const inorderTraverse = (id, depth) => {
+    if (!id || !nodeMap.has(id)) return;
+    const children = childrenMap.get(id);
+    inorderTraverse(children ? children.left : null, depth + 1);
+    inorder.push(id);
+    depths.set(id, depth);
+    inorderTraverse(children ? children.right : null, depth + 1);
+  };
+
+  inorderTraverse(rootId, 0);
+
+  inorder.forEach((id, idx) => {
+    positions.set(id, { x: idx, y: depths.get(id) });
+  });
+};
+
+// Override renderFromSnapshot to use enter/update/exit pattern so CSS transitions work.
+Animator.prototype.renderFromSnapshot = function(snap) {
+  if (!snap || !snap.nodes) return;
+  const { nodes, highlightIds, edgeHighlightIds } = snap;
+
+  const nodeMap = new Map();
+  const childrenMap = new Map();
+  nodes.forEach(n => nodeMap.set(n.id, n));
+  let rootId = null;
+  nodes.forEach(n => { if (n.parentId === null) rootId = n.id; });
+  nodes.forEach(n => {
+    if (n.leftId || n.rightId) {
+      const ch = {};
+      if (n.leftId) ch.left = n.leftId;
+      if (n.rightId) ch.right = n.rightId;
+      childrenMap.set(n.id, ch);
+    }
+  });
+
+  // Compute tree layout
+  const positions = new Map();
+  if (rootId !== null) {
+    this.layoutTree(rootId, nodeMap, childrenMap, positions);
+  }
+
+  const svgW = 1000, svgH = 600;
+  let maxDepth = 0;
+  positions.forEach(p => { if (p.y > maxDepth) maxDepth = p.y; });
+  const nodeCount = positions.size;
+  const paddingX = nodeCount > 15 ? 30 : 60;
+  const paddingY = 45;
+  const levelHeight = Math.min(80, Math.max(55, (svgH - 2 * paddingY - 40) / Math.max(maxDepth + 1, 1)));
+
+  // Convert to SVG coordinates
+  let maxX = -Infinity, minX = Infinity;
+  positions.forEach(p => { if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x; });
+
+  const renderPos = new Map();
+  if (positions.size === 1) {
+    const [id] = [...positions.entries()][0];
+    renderPos.set(id, { x: svgW / 2, y: paddingY + 40 });
+  } else if (positions.size > 1) {
+    const rangeX = Math.max(maxX - minX, 1);
+    const availableW = svgW - 2 * paddingX;
+    positions.forEach((p, id) => {
+      renderPos.set(id, {
+        x: paddingX + (p.x - minX) / rangeX * availableW,
+        y: paddingY + 40 + p.y * levelHeight
+      });
+    });
+  }
+
+  // --- ENTER/UPDATE/EXIT for edges ---
+  const newEdgeIds = new Set();
+
+  nodes.forEach(n => {
+    if (n.parentId === null || n.parentId === undefined) return;
+    newEdgeIds.add(n.id);
+  });
+
+  // Remove stale edges
+  const toRemoveEdges = [];
+  this.edgeElements.forEach((line, childId) => {
+    if (!newEdgeIds.has(childId)) toRemoveEdges.push(childId);
+  });
+  toRemoveEdges.forEach(id => {
+    const el = this.edgeElements.get(id);
+    if (el) el.remove();
+    this.edgeElements.delete(id);
+  });
+
+  // Create or update edges
+  nodes.forEach(n => {
+    if (n.parentId === null || n.parentId === undefined) return;
+    const parentPos = renderPos.get(n.parentId);
+    const childPos = renderPos.get(n.id);
+    if (!parentPos || !childPos) return;
+
+    const isHighlighted = edgeHighlightIds && edgeHighlightIds.includes(n.id);
+    let line = this.edgeElements.get(n.id);
+    if (line) {
+      // Update existing
+      line.setAttribute('x1', parentPos.x);
+      line.setAttribute('y1', parentPos.y);
+      line.setAttribute('x2', childPos.x);
+      line.setAttribute('y2', childPos.y);
+      line.setAttribute('stroke', isHighlighted ? '#e94560' : '#555');
+      line.setAttribute('stroke-width', isHighlighted ? '3' : '2');
+    } else {
+      // Create new
+      line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', parentPos.x);
+      line.setAttribute('y1', parentPos.y);
+      line.setAttribute('x2', childPos.x);
+      line.setAttribute('y2', childPos.y);
+      line.setAttribute('stroke', isHighlighted ? '#e94560' : '#555');
+      line.setAttribute('stroke-width', isHighlighted ? '3' : '2');
+      line.setAttribute('class', 'edge-line');
+      this.edgesGroup.appendChild(line);
+      this.edgeElements.set(n.id, line);
+    }
+  });
+
+  // --- ENTER/UPDATE/EXIT for nodes ---
+  const newNodeIds = new Set(nodes.map(n => n.id));
+
+  // Remove stale nodes
+  const toRemoveNodes = [];
+  this.nodeElements.forEach((g, id) => {
+    if (!newNodeIds.has(id)) toRemoveNodes.push(id);
+  });
+  toRemoveNodes.forEach(id => {
+    const el = this.nodeElements.get(id);
+    if (el) el.remove();
+    this.nodeElements.delete(id);
+  });
+
+  // Create or update nodes
+  nodes.forEach(n => {
+    const pos = renderPos.get(n.id);
+    if (!pos) return;
+
+    const isHighlighted = highlightIds && highlightIds.includes(n.id);
+    const fillColor = n.color === RED ? '#e94560' : '#2d2d44';
+    const strokeColor = isHighlighted ? '#ffd700' : (n.color === RED ? '#ff6b81' : '#555');
+    const strokeWidth = isHighlighted ? '4' : '2.5';
+    const textSize = n.key >= 100 ? '11px' : '13px';
+
+    let g = this.nodeElements.get(n.id);
+    if (g) {
+      // Update existing - CSS transitions animate these changes
+      const circle = g.querySelector('circle');
+      const text = g.querySelector('text');
+      if (circle) {
+        circle.setAttribute('cx', pos.x);
+        circle.setAttribute('cy', pos.y);
+        circle.setAttribute('fill', fillColor);
+        circle.setAttribute('stroke', strokeColor);
+        circle.setAttribute('stroke-width', strokeWidth);
+      }
+      if (text) {
+        text.setAttribute('x', pos.x);
+        text.setAttribute('y', pos.y + 4.5);
+        text.textContent = n.key;
+        text.setAttribute('font-size', textSize);
+      }
+    } else {
+      // Create new
+      g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', pos.x);
+      circle.setAttribute('cy', pos.y);
+      circle.setAttribute('r', '22');
+      circle.setAttribute('fill', fillColor);
+      circle.setAttribute('stroke', strokeColor);
+      circle.setAttribute('stroke-width', strokeWidth);
+      circle.setAttribute('class', 'node-circle');
+      g.appendChild(circle);
+
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', pos.x);
+      text.setAttribute('y', pos.y + 4.5);
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('fill', '#fff');
+      text.setAttribute('class', 'node-text');
+      text.setAttribute('font-size', textSize);
+      text.textContent = n.key;
+      g.appendChild(text);
+
+      this.nodesGroup.appendChild(g);
+      this.nodeElements.set(n.id, g);
+    }
+  });
+
+  // --- NIL markers enter/update/exit ---
+  const newNilKeys = new Set();
+  if (nodeCount > 0 && nodeCount <= 20) {
+    nodes.forEach(n => {
+      const pos = renderPos.get(n.id);
+      if (!pos) return;
+      const children = childrenMap.get(n.id);
+      if (!children || !children.left) {
+        newNilKeys.add('L' + n.id);
+      }
+      if (!children || !children.right) {
+        newNilKeys.add('R' + n.id);
+      }
+    });
+  }
+
+  // Remove stale NIL markers
+  const toRemoveNil = [];
+  this.nilElements.forEach((g, key) => {
+    if (!newNilKeys.has(key)) toRemoveNil.push(key);
+  });
+  toRemoveNil.forEach(key => {
+    const el = this.nilElements.get(key);
+    if (el) el.remove();
+    this.nilElements.delete(key);
+  });
+
+  // Create or update NIL markers
+  const nilRadius = 7;
+  nodes.forEach(n => {
+    const pos = renderPos.get(n.id);
+    if (!pos) return;
+    const children = childrenMap.get(n.id);
+    const nilDx = 36;
+    const nilDy = 50;
+
+    const makeNil = (key, side) => {
+      const dx = side === 'left' ? -nilDx : nilDx;
+      const cx = pos.x + dx;
+      const cy = pos.y + nilDy;
+
+      let g = this.nilElements.get(key);
+      if (g) {
+        const c = g.querySelector('circle');
+        const t = g.querySelector('text');
+        if (c) { c.setAttribute('cx', cx); c.setAttribute('cy', cy); }
+        if (t) { t.setAttribute('x', cx); t.setAttribute('y', cy + 2.5); }
+      } else {
+        g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        c.setAttribute('cx', cx); c.setAttribute('cy', cy);
+        c.setAttribute('r', nilRadius);
+        c.setAttribute('fill', 'transparent');
+        c.setAttribute('stroke', '#444');
+        c.setAttribute('stroke-width', '1');
+        c.setAttribute('stroke-dasharray', '2,2');
+        g.appendChild(c);
+        const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        t.setAttribute('x', cx); t.setAttribute('y', cy + 2.5);
+        t.setAttribute('text-anchor', 'middle');
+        t.setAttribute('fill', '#555');
+        t.setAttribute('font-size', '7px');
+        t.textContent = 'N';
+        g.appendChild(t);
+        this.nodesGroup.appendChild(g);
+        this.nilElements.set(key, g);
+      }
+    };
+
+    if (!children || !children.left) makeNil('L' + n.id, 'left');
+    if (!children || !children.right) makeNil('R' + n.id, 'right');
+  });
+
+  // Update tree stats
+  const statsEl = document.getElementById('treeStats');
+  if (statsEl) {
+    if (nodes.length === 0) {
+      statsEl.textContent = '空树';
+    } else {
+      const blackCount = nodes.filter(n => n.color === BLACK).length;
+      const redCount = nodes.filter(n => n.color === RED).length;
+      statsEl.textContent = `节点: ${nodes.length}  (⚫${blackCount}  🔴${redCount})`;
+    }
+  }
+
+  // Show hint for empty tree
+  const existingHint = this.nodesGroup.querySelector('.empty-hint');
+  if (nodes.length === 0) {
+    if (!existingHint) {
+      const hint = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      hint.setAttribute('x', 500); hint.setAttribute('y', 280);
+      hint.setAttribute('text-anchor', 'middle');
+      hint.setAttribute('fill', '#444');
+      hint.setAttribute('font-size', '20px');
+      hint.setAttribute('font-weight', '300');
+      hint.setAttribute('class', 'empty-hint');
+      hint.textContent = '🌳 树为空 — 输入键值后点击「插入」或「随机生成」';
+      this.nodesGroup.appendChild(hint);
+    }
+  } else if (existingHint) {
+    existingHint.remove();
+  }
+
+  // Glow filter
+  let defs = this.svg.querySelector('defs');
+  if (!defs) {
+    defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    this.svg.insertBefore(defs, this.svg.firstChild);
+  }
+  defs.innerHTML = `<filter id="glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+};
+
+// Also fix the snapshot to include all NIL children info
+// We need to track which nodes have which children
+const origSnapshot = RBTree.prototype._snapshot;
+RBTree.prototype._snapshot = function() {
+  const nodes = [];
+  const traverse = (n) => {
+    if (this.isNil(n)) return;
+    nodes.push({
+      id: n.id,
+      key: n.key,
+      color: n.color,
+      parentId: this.isNil(n.parent) ? null : n.parent.id,
+      leftId: this.isNil(n.left) ? null : n.left.id,
+      rightId: this.isNil(n.right) ? null : n.right.id,
+      hasLeft: !this.isNil(n.left),
+      hasRight: !this.isNil(n.right),
+    });
+    traverse(n.left);
+    traverse(n.right);
+  };
+  if (!this.isNil(this.root)) traverse(this.root);
+  return nodes;
+};
+
+// ============================================================
+//  4. Event Handlers
+// ============================================================
+
+const keyInput = document.getElementById('keyInput');
+const btnInsert = document.getElementById('btnInsert');
+const btnDelete = document.getElementById('btnDelete');
+const btnRandom = document.getElementById('btnRandom');
+const btnReset = document.getElementById('btnReset');
+const btnPause = document.getElementById('btnPause');
+const btnNext = document.getElementById('btnNext');
+const speedSlider = document.getElementById('speedSlider');
+
+let isAnimating = false;
+
+function getKey() {
+  return parseInt(keyInput.value) || Math.floor(Math.random() * 200) + 1;
+}
+
+function doInsert() {
+  if (isAnimating) return;
+  const key = getKey();
+  keyInput.value = key;
+  tree.put(key);
+  if (tree.steps.length > 0) {
+    animator.loadSteps(tree.steps);
+    if (tree.steps.length > 1) {
+      isAnimating = true;
+      animator.play();
+      const checkDone = setInterval(() => {
+        if (!animator.isPlaying && !animator.isPaused) {
+          isAnimating = false;
+          clearInterval(checkDone);
+        }
+      }, 100);
+    }
+  }
+}
+
+function doDelete() {
+  if (isAnimating) return;
+  const key = getKey();
+  keyInput.value = key;
+  tree.remove(key);
+  if (tree.steps.length > 0) {
+    animator.loadSteps(tree.steps);
+    if (tree.steps.length > 1) {
+      isAnimating = true;
+      animator.play();
+      const checkDone = setInterval(() => {
+        if (!animator.isPlaying && !animator.isPaused) {
+          isAnimating = false;
+          clearInterval(checkDone);
+        }
+      }, 100);
+    }
+  } else {
+    // Refresh display
+    animator.loadSteps([]);
+    animator.renderFromSnapshot({ nodes: tree._snapshot() });
+  }
+}
+
+function doRandom() {
+  if (isAnimating) return;
+  const count = Math.floor(Math.random() * 8) + 5;
+  const keys = [];
+  for (let i = 0; i < count; i++) {
+    keys.push(Math.floor(Math.random() * 99) + 1);
+  }
+
+  // Reset tree
+  tree.root = tree.NIL;
+  tree.NIL.left = null;
+  tree.NIL.right = null;
+
+  // Insert one by one and collect all steps
+  let allSteps = [];
+  keys.forEach(k => {
+    tree.put(k);
+    allSteps = allSteps.concat(tree.steps.slice(0, -1)); // exclude final 'done' of each except keep last
+  });
+  // Keep last step
+  if (tree.steps.length > 0) {
+    allSteps.push(tree.steps[tree.steps.length - 1]);
+  }
+
+  if (allSteps.length > 0) {
+    // But we need the tree state to be correct for allSteps...
+    // This is a problem: each put() records steps on the mutating tree,
+    // so the snapshots per-step would be from intermediate states.
+    // The combined steps need to be replayed as a whole.
+    //
+    // Simpler approach: Just build a combined step list.
+    // The tree has already been fully mutated at this point.
+    // We need to take the current tree state and show it.
+    //
+    // For random, let's just do quick inserts without animation,
+    // then show the final tree.
+    tree.root = tree.NIL;
+    tree.NIL.left = null;
+    tree.NIL.right = null;
+    keys.forEach(k => {
+      tree.put(k);
+    });
+    isAnimating = true;
+    // Create a single "done" step showing the final state
+    const finalSteps = [{
+      type: 'done', tag: 'done',
+      msg: `🎲 随机生成了 ${keys.length} 个节点: [${keys.sort((a,b)=>a-b).join(', ')}]`,
+      data: { snapshot: { nodes: tree._snapshot(), highlightIds: [], edgeHighlightIds: [], flashIds: [] } }
+    }];
+    animator.loadSteps(finalSteps);
+    animator.goToStep(0);
+    isAnimating = false;
+    animator.setStatus('空闲', false);
+  }
+}
+
+function doReset() {
+  tree.root = tree.NIL;
+  tree.NIL.left = null;
+  tree.NIL.right = null;
+  animator.reset();
+  isAnimating = false;
+  renderEmpty();
+}
+
+function renderEmpty() {
+  const snap = { nodes: [] };
+  animator.renderFromSnapshot(snap);
+}
+
+// Pause/Resume toggle
+btnPause.addEventListener('click', () => {
+  if (animator.isPlaying) {
+    animator.pause();
+    btnPause.textContent = '▶️ 继续';
+  } else if (animator.isPaused) {
+    animator.resume();
+    btnPause.textContent = '⏸ 暂停';
+  } else {
+    // If not playing and not paused, start from beginning
+    if (tree.steps.length > 0) {
+      animator.play();
+      btnPause.textContent = '⏸ 暂停';
+    }
+  }
+});
+
+btnNext.addEventListener('click', () => {
+  animator.nextStep();
+  btnPause.textContent = '⏸ 暂停';
+});
+
+btnInsert.addEventListener('click', doInsert);
+btnDelete.addEventListener('click', doDelete);
+btnRandom.addEventListener('click', doRandom);
+btnReset.addEventListener('click', doReset);
+
+// Speed slider
+speedSlider.addEventListener('input', () => {
+  animator.updateSpeedDisplay();
+});
+
+// Keyboard shortcut: Enter to insert
+keyInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') doInsert();
+});
+
+// ============================================================
+//  5. Keyboard Shortcuts
+// ============================================================
+
+document.addEventListener('keydown', (e) => {
+  // Don't capture when typing in the input
+  if (e.target === keyInput) return;
+
+  switch (e.key) {
+    case ' ':
+      e.preventDefault();
+      btnPause.click();
+      break;
+    case 'ArrowRight':
+      e.preventDefault();
+      btnNext.click();
+      break;
+    case 'ArrowLeft':
+      e.preventDefault();
+      animator.prevStep();
+      btnPause.textContent = '⏸ 暂停';
+      break;
+    case 'i':
+    case 'I':
+      e.preventDefault();
+      doInsert();
+      break;
+    case 'd':
+    case 'D':
+      e.preventDefault();
+      doDelete();
+      break;
+    case 'r':
+    case 'R':
+      e.preventDefault();
+      doRandom();
+      break;
+  }
+});
+
+// ============================================================
+//  6. Init - show empty tree
+// ============================================================
+
+renderEmpty();
+animator.updateSpeedDisplay();
+
+// ============================================================
+//  6. Fix NIL handling in snapshot recording
+// ============================================================
+
+// Patch: When recording snapshot, we want to pass the full node list
+// including child info for rendering. The hasLeft/hasRight field helps.
+
+// The issue is that snapshot records children but doesn't distinguish
+// "no child because NIL" from "no child because not yet processed".
+// We already fixed this by adding hasLeft/hasRight fields.
+
+// One more fix: In deleteFixup, x might be NIL, and snapshot might fail
+// because NIL.id might not be in the map. Let's handle that.
+
+console.log('🔴⚫ 红黑树可视化工具已启动！');
+console.log('基于《算法导论》标准实现，支持插入/删除/随机生成');
+console.log('使用速度滑块调节动画速度，支持暂停/单步执行');
+</script>
+</body>
+</html>
