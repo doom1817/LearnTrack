@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>同步容器与并发容器</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+            max-width: 880px;
+            margin: 40px auto;
+            padding: 0 24px;
+            color: #1a1a1a;
+            line-height: 1.7;
+            background: #fafafa;
+        }
+        h2 { color: #1a1a2e; border-bottom: 3px solid #4361ee; padding-bottom: 8px; margin-top: 40px; }
+        h3 { color: #2d2d5e; margin-top: 28px; }
+        h4 { color: #444; margin: 16px 0 6px; }
+        p  { margin: 8px 0; }
+        ul, ol { padding-left: 22px; }
+        li { margin: 6px 0; }
+        code {
+            background: #e8ecf6;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+            font-size: 0.92em;
+            color: #2d2d5e;
+        }
+        b code { background: #dce2f5; }
+        .sub-title { color: #666; font-size: 0.95em; margin-top: -10px; margin-bottom: 28px; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0 40px;
+            font-size: 0.95em;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        th {
+            background: #4361ee;
+            color: #fff;
+            font-weight: 600;
+            text-align: left;
+            padding: 12px 16px;
+        }
+        td {
+            padding: 11px 16px;
+            border-bottom: 1px solid #e0e4ee;
+            background: #fff;
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f4f6fd; }
+        td:first-child { font-weight: 600; color: #2d2d5e; white-space: nowrap; }
+
+        .badge {
+            display: inline-block;
+            background: #4361ee;
+            color: #fff;
+            font-size: 0.75em;
+            font-weight: 600;
+            padding: 2px 10px;
+            border-radius: 12px;
+            margin-right: 6px;
+        }
+        .badge.green { background: #2ec4b6; }
+        .badge.orange { background: #f77f00; }
+        .badge.red { background: #e63946; }
+
+        .tip-box {
+            background: #eef1fa;
+            border-left: 4px solid #4361ee;
+            padding: 12px 18px;
+            border-radius: 6px;
+            margin: 18px 0;
+            font-size: 0.95em;
+        }
+        .tip-box strong { color: #2d2d5e; }
+
+        .file-link {
+            color: #4361ee;
+            text-decoration: none;
+            border-bottom: 1px dashed #b0b8d0;
+        }
+        .file-link:hover { border-bottom-style: solid; }
+    </style>
+</head>
+<body>
+
+<h1>同步容器与并发容器</h1>
+<p class="sub-title">包路径：<code>com.interview.container</code> — 面试复习专用</p>
+
+<!-- ============== 一、同步容器 ============== -->
+<h2>一、同步容器 <span class="badge red">Synchronized</span></h2>
+<p>对应源文件：<a class="file-link" href="SynchronizedContainers.java"><code>SynchronizedContainers.java</code></a></p>
+
+<h3>核心机制</h3>
+<p>全局锁。几乎所有方法都用 <code>synchronized</code> 修饰，锁住当前对象实例。</p>
+
+<h3>常见类型</h3>
+<ul>
+    <li><code>Vector</code>、<code>Hashtable</code>（JDK 遗留类）</li>
+    <li><code>Collections.synchronizedList()</code>、<code>synchronizedSet()</code>、<code>synchronizedMap()</code> 包装出的同步视图</li>
+</ul>
+
+<h3>具体表现</h3>
+<ol>
+    <li>
+        <b>读写全串行</b>——读操作也需要获取锁，读多写少场景下性能严重下降。
+    </li>
+    <li>
+        <b>复合操作非原子</b>——迭代、put-if-absent、先检查后执行等组合操作仍需外部同步，否则可能抛出
+        <code>ConcurrentModificationException</code>。
+    </li>
+    <li>
+        <b>迭代器 fail-fast</b>——迭代期间若其他线程修改了集合，立即抛出
+        <code>ConcurrentModificationException</code>，而非继续遍历脏数据。
+    </li>
+</ol>
+
+<div class="tip-box">
+    <strong>📌 典型坑点：</strong> 迭代器遍历时必须手动 <code>synchronized(collection) { for (...) }</code>，
+    否则多线程环境下必现 <code>ConcurrentModificationException</code>。
+</div>
+
+<!-- ============== 二、并发容器 ============== -->
+<h2>二、并发容器 <span class="badge green">Concurrent</span></h2>
+<p>对应源文件：<a class="file-link" href="ConcurrentContainers/ConcurrentHashMapDemo.java"><code>ConcurrentHashMapDemo.java</code></a>、
+<a class="file-link" href="ConcurrentContainers/CopyOnWriteDemo.java"><code>CopyOnWriteDemo.java</code></a></p>
+
+<h3>核心机制</h3>
+<p>细粒度锁 + CAS（Compare-And-Swap）无锁算法 + 分段 / 桶锁，取代单一的全局锁。</p>
+
+<h3>常见类型</h3>
+
+<h4><span class="badge">ConcurrentHashMap</span> 分段哈希表</h4>
+<table>
+    <tr><th>JDK 版本</th><th>实现策略</th></tr>
+    <tr><td>JDK 7</td><td>Segment 数组，每段继承 <code>ReentrantLock</code>，锁住一段哈希桶</td></tr>
+    <tr><td>JDK 8+</td><td>CAS + <code>synchronized</code> 只锁链表 / 红黑树头节点，读操作几乎完全无锁</td></tr>
+</table>
+<ul>
+    <li>写操作只锁对应的桶，不影响其他桶的读写</li>
+    <li>提供了 <code>putIfAbsent</code>、<code>compute</code> 等原子复合方法</li>
+    <li>迭代器是<strong>弱一致性</strong>的：遍历不抛异常，但可能看不到迭代开始后的修改</li>
+</ul>
+
+<h4><span class="badge orange">CopyOnWriteArrayList / CopyOnWriteArraySet</span> 写时复制</h4>
+<ul>
+    <li>修改操作（add、set、remove）用 <code>ReentrantLock</code> 保证单线程复制整个底层数组</li>
+    <li><b>读完全无锁，永不阻塞</b>，性能极高</li>
+    <li>迭代器是<strong>快照风格</strong>的：迭代器创建后，其他线程的修改不会影响当前遍历</li>
+    <li>适合<strong>读多写极少</strong>的场景；写频繁时复制成本高、内存占用大</li>
+</ul>
+
+<h4><span class="badge">ConcurrentLinkedQueue</span> 无锁队列</h4>
+<ul>
+    <li>基于 CAS 的无锁非阻塞队列（Michael-Scott 算法）</li>
+    <li>无锁化高并发，适合多生产者、多消费者场景</li>
+</ul>
+
+<h4><span class="badge">BlockingQueue 系列</span> 阻塞队列</h4>
+<p>如 <code>ArrayBlockingQueue</code>、<code>LinkedBlockingQueue</code>、<code>SynchronousQueue</code> 等：</p>
+<ul>
+    <li>结合 <code>ReentrantLock</code> + <code>Condition</code> 实现阻塞的生产者-消费者模式</li>
+    <li><code>put()</code> 满时阻塞，<code>take()</code> 空时阻塞</li>
+</ul>
+
+<h3>具体表现</h3>
+<ol>
+    <li><b>读写并发度高</b>——读多写少和并发写入场景下远优于同步容器。</li>
+    <li><b>弱一致性迭代器（fail-safe）</b>——遍历过程中其他线程的修改不会被看到，但也不抛异常。
+        准确地说，<code>ConcurrentHashMap</code> 的迭代器反映迭代开始时的状态或其后的部分状态；
+        <code>CopyOnWriteArrayList</code> 的迭代器则是创建时刻的数组快照。</li>
+    <li><b>size() / isEmpty() 语义减弱</b>——这些方法的返回值在并发环境下是近似值，不保证实时精确。</li>
+</ol>
+
+<div class="tip-box">
+    <strong>📌 面试常问：</strong> "ConcurrentHashMap 如何保证线程安全？" → JDK 8 的回答思路：
+    <ol style="margin:4px 0 0; padding-left:20px;">
+        <li>数组初始化用 CAS（避免多次初始化）；</li>
+        <li>put 时对应桶为空 → CAS 直接插入；</li>
+        <li>桶非空 → <code>synchronized</code> 锁住头节点后再操作链表/红黑树；</li>
+        <li>扩容时多线程协同（<code>transfer</code> 方法支持并发迁移）。</li>
+    </ol>
+</div>
+
+<!-- ============== 三、对比总结 ============== -->
+<h2>三、对比总结</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>维度</th>
+            <th>同步容器</th>
+            <th>并发容器</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>锁粒度</td>
+            <td>全局锁（整个对象）</td>
+            <td>分段 / 桶锁 或 CAS 无锁</td>
+        </tr>
+        <tr>
+            <td>读并发</td>
+            <td>串行（也需要锁）</td>
+            <td>几乎无锁，极高并发</td>
+        </tr>
+        <tr>
+            <td>写并发</td>
+            <td>串行</td>
+            <td>只锁对应分片</td>
+        </tr>
+        <tr>
+            <td>迭代器风格</td>
+            <td>fail-fast（快速失败，抛异常）</td>
+            <td>fail-safe / 弱一致性（不抛异常）</td>
+        </tr>
+        <tr>
+            <td>复合操作</td>
+            <td>需外部手动加锁</td>
+            <td>提供原子复合方法（如 <code>putIfAbsent</code>）</td>
+        </tr>
+        <tr>
+            <td>适用场景</td>
+            <td>低频访问或完全串行无妨</td>
+            <td>高并发读写</td>
+        </tr>
+    </tbody>
+</table>
+
+<hr>
+<p style="color:#888; font-size:0.85em; text-align:center;">由 <code>package-info.java</code> 自动生成 — 仅供面试复习参考</p>
+
+</body>
+</html>
