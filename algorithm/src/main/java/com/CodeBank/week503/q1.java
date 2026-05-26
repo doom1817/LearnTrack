@@ -1,8 +1,6 @@
-package com.CodeBank.week;
+package com.CodeBank.week503;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 /**
  * @author: doom
