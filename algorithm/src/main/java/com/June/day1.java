@@ -8,7 +8,7 @@ import java.util.Arrays;
  * @description:
  *  力扣2144. 打折购买糖果的最小开销
  */
-public class title1 {
+public class day1 {
     public static void main(String[] args) {
         System.out.println(minimumCost(new int[]{1,2,3}));//5
     }

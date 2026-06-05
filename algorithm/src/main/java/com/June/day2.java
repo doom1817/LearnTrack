@@ -9,7 +9,7 @@ import java.util.Map;
  * @date: 2026/06/02/09:14
  * @description: 力扣3633. 最早完成陆地和水上游乐设施的时间 I
  */
-public class title2 {
+public class day2 {
     public static void main(String[] args) {
         System.out.println(earliestFinishTime(new int[]{2, 8}, new int[]{4, 1}, new int[]{0}, new int[]{3})); // 9
     }
