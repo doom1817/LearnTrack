@@ -16,5 +16,6 @@
  * title11 是对链表操作的使用
  * title12 是对环形子数组的使用
  * title13 是对二分查找的使用
+ * title14 是对数学运算与快速幂算法的使用
  */
 package com.interviews;
